@@ -1,3 +1,5 @@
+package com.example.motioncontrollerapp
+
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -20,6 +22,7 @@ import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
 import java.net.URI
 import com.google.gson.Gson
+import kotlin.math.abs
 
 class MainActivity : ComponentActivity(), SensorEventListener {
     private lateinit var webSocketClient: WebSocketClient
@@ -216,82 +219,17 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
     }
 
-/*
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event == null) return
 
-        when (event.sensor.type) {
-            Sensor.TYPE_ACCELEROMETER -> {
-                // Filtr dolnoprzepustowy dla akcelerometru
-                lowPassAccelX = lowPassFilter(event.values[0], lowPassAccelX)
-                lowPassAccelY = lowPassFilter(event.values[1], lowPassAccelY)
-                lowPassAccelZ = lowPassFilter(event.values[2], lowPassAccelZ)
-
-                // Filtr Kalmana na danych z akcelerometru
-                val filteredAccelX = kalmanFilterAccelX.update(lowPassAccelX)
-                val filteredAccelY = kalmanFilterAccelY.update(lowPassAccelY)
-                val filteredAccelZ = kalmanFilterAccelZ.update(lowPassAccelZ)
-
-                val motionData = MotionData(
-                    accelX = filteredAccelX,
-                    accelY = filteredAccelY,
-                    accelZ = filteredAccelZ,
-                    gyroX = 0f,
-                    gyroY = 0f,
-                    gyroZ = 0f
-                )
-                sendMotionDataIfChanged(motionData)
-
-                accelerometerData = "Akcelerometr (po filtrach): x=$filteredAccelX, y=$filteredAccelY, z=$filteredAccelZ"
-                println("Wysłano dane akcelerometru: $accelerometerData")
-            }
-            Sensor.TYPE_GYROSCOPE -> {
-                // Filtr dolnoprzepustowy dla żyroskopu
-                lowPassGyroX = lowPassFilter(event.values[0], lowPassGyroX)
-                lowPassGyroY = lowPassFilter(event.values[1], lowPassGyroY)
-                lowPassGyroZ = lowPassFilter(event.values[2], lowPassGyroZ)
-
-                // Filtr Kalmana na danych z żyroskopu
-                val filteredGyroX = kalmanFilterGyroX.update(lowPassGyroX)
-                val filteredGyroY = kalmanFilterGyroY.update(lowPassGyroY)
-                val filteredGyroZ = kalmanFilterGyroZ.update(lowPassGyroZ)
-
-                val motionData = MotionData(
-                    accelX = 0f,
-                    accelY = 0f,
-                    accelZ = 0f,
-                    gyroX = filteredGyroX,
-                    gyroY = filteredGyroY,
-                    gyroZ = filteredGyroZ
-                )
-                sendMotionDataIfChanged(motionData)
-
-                gyroscopeData = "Żyroskop (po filtrach): x=$filteredGyroX, y=$filteredGyroY, z=$filteredGyroZ"
-                println("Wysłano dane żyroskopu: $gyroscopeData")
-            }
-        }
-    }
-*/
     private fun lowPassFilter(input: Float, output: Float, alpha: Float = 0.05f): Float {
         return output + alpha * (input - output)
-    }
-
-    private fun sendMotionData(motionData: MotionData) {
-        if (webSocketClient.isOpen) {
-
-            val json = gson.toJson(motionData)
-            webSocketClient.send(json)
-        } else {
-            println("WebSocket jest zamknięty, nie można wysłać danych.")
-        }
     }
 
 
     private fun sendMotionDataIfChanged(motionData: MotionData) {
         if (webSocketClient.isOpen) {
-            if (Math.abs(motionData.gyroX - lastGyroX) > threshold ||
-                Math.abs(motionData.gyroY - lastGyroY) > threshold ||
-                Math.abs(motionData.gyroZ - lastGyroZ) > threshold) {
+            if (abs(motionData.gyroX - lastGyroX) > threshold ||
+                abs(motionData.gyroY - lastGyroY) > threshold ||
+                abs(motionData.gyroZ - lastGyroZ) > threshold) {
 
                 lastGyroX = motionData.gyroX
                 lastGyroY = motionData.gyroY
