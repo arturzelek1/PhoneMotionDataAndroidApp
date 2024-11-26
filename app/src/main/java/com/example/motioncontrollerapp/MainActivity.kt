@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private val gson = Gson()
 
     // Zmienna określająca rozmiar bufora dla średniej ruchomej
-    private val MOVING_AVERAGE_WINDOW_SIZE = 200
+    private val MOVING_AVERAGE_WINDOW_SIZE = 100
 
     private val accelBufferX = ArrayDeque<Float>(MOVING_AVERAGE_WINDOW_SIZE)
     private val accelBufferY = ArrayDeque<Float>(MOVING_AVERAGE_WINDOW_SIZE)
@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private var lastGyroX = 0f
     private var lastGyroY = 0f
     private var lastGyroZ = 0f
-    private val threshold = 2.0f  // Próg zmiany
+    private val threshold = 0.002f  // Próg zmiany
 
 
     data class MotionData(
@@ -83,18 +83,19 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     )
 
     // Funkcja pomocnicza do obliczania średniej ruchomej
+    /*
     private fun calculateMovingAverage(buffer: ArrayDeque<Float>, newValue: Float): Float {
         if (buffer.size >= MOVING_AVERAGE_WINDOW_SIZE) buffer.removeFirst()
         buffer.addLast(newValue)
         return buffer.average().toFloat()
-    }
+    }*/
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        webSocketClient = object : WebSocketClient(URI("ws://192.168.0.107:8080/motion")) {
+        webSocketClient = object : WebSocketClient(URI("ws://192.168.0.107:8080")) {
             override fun onOpen(handshakedata: ServerHandshake?) {
                 println("WebSocket połączony")
             }
@@ -170,21 +171,22 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 val filteredAccelZ = kalmanFilterAccelZ.update(lowPassAccelZ)
 
                 // Średnia ruchoma na danych z akcelerometru
+                /*
                 val avgAccelX = calculateMovingAverage(accelBufferX, filteredAccelX)
                 val avgAccelY = calculateMovingAverage(accelBufferY, filteredAccelY)
                 val avgAccelZ = calculateMovingAverage(accelBufferZ, filteredAccelZ)
-
+                */
                 val motionData = MotionData(
-                    accelX = avgAccelX,
-                    accelY = avgAccelY,
-                    accelZ = avgAccelZ,
+                    accelX = filteredAccelX,
+                    accelY = filteredAccelY,
+                    accelZ = filteredAccelZ,
                     gyroX = 0f,
                     gyroY = 0f,
                     gyroZ = 0f
                 )
                 sendMotionDataIfChanged(motionData)
 
-                accelerometerData = "Akcelerometr (po filtrach i średniej): x=$avgAccelX, y=$avgAccelY, z=$avgAccelZ"
+                accelerometerData = "Akcelerometr (po filtrach i średniej): x=$filteredAccelX, y=$filteredAccelY, z=$filteredAccelZ"
                 println("Wysłano dane akcelerometru: $accelerometerData")
             }
             Sensor.TYPE_GYROSCOPE -> {
@@ -199,28 +201,28 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 val filteredGyroZ = kalmanFilterGyroZ.update(lowPassGyroZ)
 
                 // Średnia ruchoma na danych z żyroskopu
-                val avgGyroX = calculateMovingAverage(gyroBufferX, filteredGyroX)
+                /*val avgGyroX = calculateMovingAverage(gyroBufferX, filteredGyroX)
                 val avgGyroY = calculateMovingAverage(gyroBufferY, filteredGyroY)
                 val avgGyroZ = calculateMovingAverage(gyroBufferZ, filteredGyroZ)
-
+                */
                 val motionData = MotionData(
                     accelX = 0f,
                     accelY = 0f,
                     accelZ = 0f,
-                    gyroX = avgGyroX,
-                    gyroY = avgGyroY,
-                    gyroZ = avgGyroZ
+                    gyroX = filteredGyroX,
+                    gyroY = filteredGyroY,
+                    gyroZ = filteredGyroZ
                 )
                 sendMotionDataIfChanged(motionData)
 
-                gyroscopeData = "Żyroskop (po filtrach i średniej): x=$avgGyroX, y=$avgGyroY, z=$avgGyroZ"
+                gyroscopeData = "Żyroskop (po filtrach i średniej): x=$filteredGyroX, y=$filteredGyroY, z=$filteredGyroZ"
                 println("Wysłano dane żyroskopu: $gyroscopeData")
             }
         }
     }
 
 
-    private fun lowPassFilter(input: Float, output: Float, alpha: Float = 0.05f): Float {
+    private fun lowPassFilter(input: Float, output: Float, alpha: Float = 0.5f): Float {
         return output + alpha * (input - output)
     }
 
