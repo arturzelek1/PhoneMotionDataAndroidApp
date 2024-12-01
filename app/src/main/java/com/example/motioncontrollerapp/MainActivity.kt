@@ -32,9 +32,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null
     private var gyroscope: Sensor? = null
+    private var vectorRotation: Sensor? = null
+    private var gameRotationVector: Sensor? = null
 
     private var accelerometerData by mutableStateOf("Brak danych")
     private var gyroscopeData by mutableStateOf("Brak danych")
+    private var vectorRotationData by mutableStateOf("Brak danych")
+    private var gameRotationVectorData by mutableStateOf("Brak danych")
 
     private val gson = Gson()
 
@@ -81,6 +85,15 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         val gyroY: Float,
         val gyroZ: Float
     )
+    data class RotationData(
+        val type: String = "rotation",
+        val quaternion: List<Float>
+    )
+
+    data class GameRotationData(
+        val type: String = "GameRotation",
+        val gameQuaternion: List<Float>
+    )
 
     // Funkcja pomocnicza do obliczania średniej ruchomej
     /*
@@ -123,6 +136,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+        vectorRotation = sensorManager.getDefaultSensor((Sensor.TYPE_ROTATION_VECTOR))
+        gameRotationVector = sensorManager.getDefaultSensor((Sensor.TYPE_GAME_ROTATION_VECTOR))
 
         setContent {
             MotionControllerAppTheme {
@@ -131,7 +146,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         modifier = Modifier.padding(innerPadding),
                         response,
                         accelerometerData,
-                        gyroscopeData
+                        gyroscopeData,
+                        vectorRotationData,
+                        gameRotationVectorData
                     )
                 }
             }
@@ -147,6 +164,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         gyroscope?.also { sensor ->
             sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
             println("Zarejestrowano żyroskop")
+        }
+        vectorRotation?.also{sensor ->
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            println("Zarejestrowano sensor vector rotation")
+        }
+        gameRotationVector?.also {sensor ->
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            println("Zrejestrowano sensor game vector rotation")
         }
     }
 
@@ -218,9 +243,47 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 gyroscopeData = "Żyroskop (po filtrach i średniej): x=$filteredGyroX, y=$filteredGyroY, z=$filteredGyroZ"
                 println("Wysłano dane żyroskopu: $gyroscopeData")
             }
+            Sensor.TYPE_ROTATION_VECTOR -> {
+                val quaternion = FloatArray(4)
+                SensorManager.getQuaternionFromVector(quaternion, event.values)
+                vectorRotationData = "Rotation Vector: q0=${quaternion[0]}, q1=${quaternion[1]}, q2=${quaternion[2]}, q3=${quaternion[3]}"
+                println(vectorRotationData)
+
+                val rotationData = RotationData(type = "rotation", quaternion = quaternion.toList())
+                sendRotationData(rotationData)
+            }
+            Sensor.TYPE_GAME_ROTATION_VECTOR -> {
+                val quaternion = FloatArray(4)
+                SensorManager.getQuaternionFromVector(quaternion, event.values)
+                gameRotationVectorData = "Game Rotation Vector: q0=${quaternion[0]}, q1=${quaternion[1]}, q2=${quaternion[2]}, q3=${quaternion[3]}"
+                println(gameRotationVectorData)
+
+                val gameRotationData = GameRotationData(type = "GameRotation", gameQuaternion = quaternion.toList())
+                sendGameRotationData(gameRotationData)
+            }
         }
     }
 
+    private fun sendGameRotationData(rotationData: GameRotationData){
+        if (webSocketClient.isOpen) {
+            coroutineScope.launch {
+                val json = gson.toJson(rotationData)
+                webSocketClient.send(json)
+            }
+        } else {
+            println("WebSocket jest zamknięty, nie można wysłać danych.")
+        }
+    }
+    private fun sendRotationData(rotationData: RotationData){
+        if (webSocketClient.isOpen) {
+            coroutineScope.launch {
+                val json = gson.toJson(rotationData)
+                webSocketClient.send(json)
+            }
+        } else {
+            println("WebSocket jest zamknięty, nie można wysłać danych.")
+        }
+    }
 
     private fun lowPassFilter(input: Float, output: Float, alpha: Float = 0.5f): Float {
         return output + alpha * (input - output)
@@ -278,7 +341,9 @@ fun MainScreen(
     modifier: Modifier = Modifier,
     response: String,
     accelerometerData: String,
-    gyroscopeData: String
+    gyroscopeData: String,
+    rotationData: String,
+    gameRotationData: String
 ) {
     Column(modifier = modifier.padding(16.dp)) {
         Text(text = "Kontroler Ruchu", style = MaterialTheme.typography.titleLarge)
@@ -286,6 +351,8 @@ fun MainScreen(
 
         Text(text = accelerometerData, modifier = Modifier.padding(top = 8.dp))
         Text(text = gyroscopeData, modifier = Modifier.padding(top = 8.dp))
+        Text(text = rotationData, modifier = Modifier.padding(top = 8.dp))
+        Text(text = gameRotationData, modifier = Modifier.padding(top = 8.dp))
     }
 }
 
@@ -293,6 +360,6 @@ fun MainScreen(
 @Composable
 fun DefaultPreview() {
     MotionControllerAppTheme {
-        MainScreen(response = "", accelerometerData = "Akcelerometr", gyroscopeData = "Żyroskop")
+        MainScreen(response = "", accelerometerData = "Akcelerometr", gyroscopeData = "Żyroskop", rotationData = "Vector Rotation Data",gameRotationData = "Game Rotation Data")
     }
 }
