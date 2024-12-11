@@ -4,6 +4,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,9 +25,14 @@ import java.net.URI
 import com.google.gson.Gson
 import kotlin.math.abs
 
+
 class MainActivity : ComponentActivity(), SensorEventListener {
     private lateinit var webSocketClient: WebSocketClient
     private var response by mutableStateOf("")
+
+    private var isConnected by mutableStateOf(false)
+    private var ipAddress by mutableStateOf("")
+    private var port by mutableStateOf("")
 
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
     private lateinit var sensorManager: SensorManager
@@ -102,12 +108,52 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         buffer.addLast(newValue)
         return buffer.average().toFloat()
     }*/
+    private fun connectWebSocket(ip: String,port: String){
+        val uri = URI("ws://$ip:$port")
+        webSocketClient = object : WebSocketClient(uri){
+            override fun onOpen(handshake: ServerHandshake?)
+            {
+                println("WebSocket połączony")
+                isConnected = true
+            }
 
+            override fun onMessage(message: String?) {
+                message?.let { msg ->
+                    coroutineScope.launch {
+                        response = msg
+                        println("Odebrano wiadomość: $msg")
+                    }
+                }
+            }
+            override fun onClose(code: Int, reason: String?, remote: Boolean) {
+                println("WebSocket zamknięty: $reason, kod: $code")
+                isConnected = false
+            }
+
+            override fun onError(ex: Exception?) {
+                ex?.printStackTrace()
+                println("Błąd WebSocket: ${ex?.message}")
+            }
+        }
+        webSocketClient.connect()
+    }
+
+    private fun closeWebSocket() {
+       if (::webSocketClient.isInitialized){
+           webSocketClient.close()
+           isConnected = false
+           println("Zamknięto połączenie WebSocket")
+       } else{
+           println("WebSocket nie jest zainicjowany")
+       }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        connectWebSocket(ipAddress,port)
+/*
         webSocketClient = object : WebSocketClient(URI("ws://192.168.0.107:8080")) {
             override fun onOpen(handshakedata: ServerHandshake?) {
                 println("WebSocket połączony")
@@ -132,12 +178,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             }
         }
         webSocketClient.connect()
-
+*/
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         vectorRotation = sensorManager.getDefaultSensor((Sensor.TYPE_ROTATION_VECTOR))
         gameRotationVector = sensorManager.getDefaultSensor((Sensor.TYPE_GAME_ROTATION_VECTOR))
+
 
         setContent {
             MotionControllerAppTheme {
@@ -148,7 +195,20 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         accelerometerData,
                         gyroscopeData,
                         vectorRotationData,
-                        gameRotationVectorData
+                        gameRotationVectorData,
+                        ipAddress,
+                        port,
+                        isConnected,
+                        onConnectedClick = {
+                            if(!isConnected) {
+                                connectWebSocket(ipAddress, port)
+                            }
+                        },
+                        onDisconnectClick = {
+                            closeWebSocket()
+                        },
+                        onIPChange = {newIP -> ipAddress = newIP},
+                        onPortChange = { newPort -> port = newPort }
                     )
                 }
             }
@@ -265,7 +325,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun sendGameRotationData(rotationData: GameRotationData){
-        if (webSocketClient.isOpen) {
+        //if (isConnected && webSocketClient.isOpen)
+        if (isConnected) {
             coroutineScope.launch {
                 val json = gson.toJson(rotationData)
                 webSocketClient.send(json)
@@ -275,7 +336,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
     }
     private fun sendRotationData(rotationData: RotationData){
-        if (webSocketClient.isOpen) {
+        //if (isConnected && webSocketClient.isOpen)
+        if (isConnected) {
             coroutineScope.launch {
                 val json = gson.toJson(rotationData)
                 webSocketClient.send(json)
@@ -291,7 +353,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
 
     private fun sendMotionDataIfChanged(motionData: MotionData) {
-        if (webSocketClient.isOpen) {
+        //if (isConnected && webSocketClient.isOpen)
+        if (isConnected) {
             if (abs(motionData.gyroX - lastGyroX) > threshold ||
                 abs(motionData.gyroY - lastGyroY) > threshold ||
                 abs(motionData.gyroZ - lastGyroZ) > threshold) {
@@ -315,7 +378,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        webSocketClient.close()
+        //webSocketClient.close()
         println("Zamknięto połączenie WebSocket")
     }
 }
@@ -343,9 +406,57 @@ fun MainScreen(
     accelerometerData: String,
     gyroscopeData: String,
     rotationData: String,
-    gameRotationData: String
+    gameRotationData: String,
+    ipAddress: String,
+    port: String,
+    isConnected: Boolean,
+    onConnectedClick : () -> Unit,
+    onDisconnectClick : () -> Unit,
+    onIPChange: (String) -> Unit,
+    onPortChange: (String) -> Unit
 ) {
     Column(modifier = modifier.padding(16.dp)) {
+        // Wprowadzenie adresu IP i portu
+        TextField(
+            value = ipAddress,
+            onValueChange = onIPChange,
+            label = { Text("Adres IP") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        TextField(
+            value = port,
+            onValueChange = onPortChange,
+            label = { Text("Port") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Przyciski do połączenia i rozłączenia
+        if (isConnected) {
+            Button(
+                onClick = onDisconnectClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Zakończ połączenie")
+            }
+        } else {
+            Button(
+                onClick = onConnectedClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Rozpocznij połączenie")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Wyświetlanie odpowiedzi z serwera
+        Text(text = "Odpowiedź z serwera: $response")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(text = "Kontroler Ruchu", style = MaterialTheme.typography.titleLarge)
         Text(text = "Odczyty z czujników:", style = MaterialTheme.typography.titleMedium)
 
@@ -360,6 +471,6 @@ fun MainScreen(
 @Composable
 fun DefaultPreview() {
     MotionControllerAppTheme {
-        MainScreen(response = "", accelerometerData = "Akcelerometr", gyroscopeData = "Żyroskop", rotationData = "Vector Rotation Data",gameRotationData = "Game Rotation Data")
+        MainScreen(response = "", accelerometerData = "Akcelerometr", gyroscopeData = "Żyroskop", rotationData = "Vector Rotation Data",gameRotationData = "Game Rotation Data", ipAddress = "IpAddress", port = "Port", isConnected = false, onConnectedClick = {}, onDisconnectClick = {}, onIPChange = {}, onPortChange = {})
     }
 }
