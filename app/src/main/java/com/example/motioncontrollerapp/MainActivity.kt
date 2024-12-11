@@ -153,32 +153,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         enableEdgeToEdge()
 
         connectWebSocket(ipAddress,port)
-/*
-        webSocketClient = object : WebSocketClient(URI("ws://192.168.0.107:8080")) {
-            override fun onOpen(handshakedata: ServerHandshake?) {
-                println("WebSocket połączony")
-            }
 
-            override fun onMessage(message: String?) {
-                message?.let { msg ->
-                    coroutineScope.launch {
-                        response = msg
-                        println("Odebrano wiadomość: $msg")
-                    }
-                }
-            }
-
-            override fun onClose(code: Int, reason: String?, remote: Boolean) {
-                println("WebSocket zamknięty: $reason, kod: $code")
-            }
-
-            override fun onError(ex: Exception?) {
-                ex?.printStackTrace()
-                println("Błąd WebSocket: ${ex?.message}")
-            }
-        }
-        webSocketClient.connect()
-*/
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
