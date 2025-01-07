@@ -167,10 +167,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     MainScreen(
                         modifier = Modifier.padding(innerPadding),
                         response,
-                        accelerometerData,
-                        gyroscopeData,
-                        vectorRotationData,
-                        gameRotationVectorData,
+                        //accelerometerData,
+                        //gyroscopeData,
+                        //vectorRotationData,
+                        //gameRotationVectorData,
                         ipAddress,
                         port,
                         isConnected,
@@ -193,19 +193,19 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     override fun onResume() {
         super.onResume()
         accelerometer?.also { sensor ->
-            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
             println("Zarejestrowano akcelerometr")
         }
         gyroscope?.also { sensor ->
-            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
             println("Zarejestrowano żyroskop")
         }
         vectorRotation?.also{sensor ->
-            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
             println("Zarejestrowano sensor vector rotation")
         }
         gameRotationVector?.also {sensor ->
-            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
             println("Zrejestrowano sensor game vector rotation")
         }
     }
@@ -378,10 +378,10 @@ class KalmanFilter {
 fun MainScreen(
     modifier: Modifier = Modifier,
     response: String,
-    accelerometerData: String,
-    gyroscopeData: String,
-    rotationData: String,
-    gameRotationData: String,
+    //accelerometerData: String,
+    //gyroscopeData: String,
+    //rotationData: String,
+    //gameRotationData: String,
     ipAddress: String,
     port: String,
     isConnected: Boolean,
@@ -428,24 +428,28 @@ fun MainScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Wyświetlanie odpowiedzi z serwera
-        Text(text = "Odpowiedź z serwera: $response")
+        //Text(text = "Odpowiedź z serwera: $response")
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Kontroler Ruchu", style = MaterialTheme.typography.titleLarge)
-        Text(text = "Odczyty z czujników:", style = MaterialTheme.typography.titleMedium)
+        //Text(text = "Kontroler Ruchu", style = MaterialTheme.typography.titleLarge)
+        //Text(text = "Odczyty z czujników:", style = MaterialTheme.typography.titleMedium)
 
-        Text(text = accelerometerData, modifier = Modifier.padding(top = 8.dp))
-        Text(text = gyroscopeData, modifier = Modifier.padding(top = 8.dp))
-        Text(text = rotationData, modifier = Modifier.padding(top = 8.dp))
-        Text(text = gameRotationData, modifier = Modifier.padding(top = 8.dp))
+        //Text(text = accelerometerData, modifier = Modifier.padding(top = 8.dp))
+        //Text(text = gyroscopeData, modifier = Modifier.padding(top = 8.dp))
+        //Text(text = rotationData, modifier = Modifier.padding(top = 8.dp))
+        //Text(text = gameRotationData, modifier = Modifier.padding(top = 8.dp))
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    MotionControllerAppTheme {
+    /*MotionControllerAppTheme {
         MainScreen(response = "", accelerometerData = "Akcelerometr", gyroscopeData = "Żyroskop", rotationData = "Vector Rotation Data",gameRotationData = "Game Rotation Data", ipAddress = "IpAddress", port = "Port", isConnected = false, onConnectedClick = {}, onDisconnectClick = {}, onIPChange = {}, onPortChange = {})
+    }*/
+    MotionControllerAppTheme {
+
+        MainScreen(response = "", ipAddress = "IpAddress", port = "Port", isConnected = false, onConnectedClick = {}, onDisconnectClick = {}, onIPChange = {}, onPortChange = {})
     }
 }
