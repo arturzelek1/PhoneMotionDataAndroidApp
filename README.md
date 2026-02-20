@@ -1,5 +1,10 @@
 # 📱 PhoneMotionDataAndroidApp
 
+![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/kotlin-%237F52FF.svg?style=for-the-badge&logo=kotlin&logoColor=white)
+![WebSockets](https://img.shields.io/badge/WebSockets-010101?style=for-the-badge&logo=socket.io&logoColor=white)
+![Android Studio](https://img.shields.io/badge/Android%20Studio-3DDC84?style=for-the-badge&logo=android-studio&logoColor=white)
+
 **PhoneMotionDataAndroidApp** is a native Android application developed to collect and log motion sensor data from mobile devices. It leverages the phone's built-in sensors (e.g., accelerometer, gyroscope) to gather real-time movement data and send it to a server. The app was developed and used as part of my engineering thesis, which focused on a game utilizing real-time player movement. It demonstrates my understanding of Android development, hardware sensors, real-time data collection, server communication. The project can be applied to fitness tracking, motion analysis, data science, or machine learning projects related to human movement.
 
 ---
